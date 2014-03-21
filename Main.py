@@ -1,46 +1,56 @@
 from textblob import TextBlob
-import urllib
-import xpath
+import urllib,argparse
+
+def argparsing(parser):
+    parser.add_argument("--verbose","-v",action="store_true",help="increase output verbosity", default="false")
+    parser.add_argument("source",help = "source file",type = str)
+    parser.add_argument("dest",help = "destination file", type = str)
+
 def main():
-    toReplace = ("\n"," ",",",".","'","(",")")
+    #parsing arguments
+    parser = argparse.ArgumentParser(description="A simple script that make some changes to the text of a file and add some zinger words in it.")
+    argparsing(parser)
+    arg = parser.parse_args()
+
+    #lists of parts of speech
     tagAd = ("RB","RBR","RBS")
     tagVB = ("VBD","VB","VBG","VBN")
     tagAD = ("JJ","JJR","JJS")
-    newline = []
     tagignore = ("CC","NN","NNS","CD","DT","EX","FW","VBZ","MD","NNP","NNPS","LS","IN","POS","PRP","PRP$","RP","SYM","TO","UH","WDT","WP","WP$","WRB","VBP","VBZ")
-    filename = open("/home/mohsin/Desktop/test.txt", 'r')
-    dest = open("/home/mohsin/Desktop/result.txt", 'w')
+    newline = []
+
+    filename = open(arg.source, 'r')
+    dest = open(arg.dest, 'w')
+
     for line in filename:
-        words = line.split(" ")
+        blob = TextBlob(line)
+        words = blob.tags
         for word in words:
-            for one in toReplace:
-                word = word.replace(one,"")
-                newword = word
-            tag = TextBlob(word)
+            flag = False
+            newword = word[0]
             try:
-                if tag.tags[0][1] not in tagignore:
-                    #print(tag.tags[0][0])
-                    webpage = urllib.urlopen("http://words.bighugelabs.com/api/2/614c64e055d7bb781e843d8a6f58b51d/{}/".format(word))
+                if word[1] not in tagignore:
+                    webpage = urllib.urlopen("http://words.bighugelabs.com/api/2/614c64e055d7bb781e843d8a6f58b51d/{}/".format(word[0]))
                     for content in webpage:
                         if content != "":
                             pos = content.split("|")
-                        if tag.tags[0][1] in tagAd:
+                        if word[1] in tagAd:
                             if pos[0] == "adverb":
-                                newword = pos[2]
-                                print(newword)
+                                flag = True
                                 break
-                        elif tag.tags[0][1] in tagVB:
+                        elif word[1] in tagVB:
                             if pos[0] == "verb":
-                                newword = pos[2]
-                                print(newword)
+                                flag = True
                                 break
-                        elif tag.tags[0][1] in tagAd:
+                        elif word[1] in tagAd:
                             if pos[0] == "adjective":
-                                newword = pos[2]
-                                print(newword)
+                                flag = True
                                 break
-                    #print(newword) 
-                    webpage.close()            
+                    webpage.close()
+                    if flag:
+                        newword = pos[2].strip()
+                        if arg.verbose:
+                            print("\"{}\" replaced with \"{}\"".format(word[0],newword))
             except IndexError:
                 pass
             newline.append(newword)
